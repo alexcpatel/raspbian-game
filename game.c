@@ -1,168 +1,167 @@
-/*This source code copyrighted by Lazy Foo' Productions (2004-2019)
-and may not be redistributed without written permission.*/
+/** @brief A simple game...
+ *
+ *
+ */
 
-// Using SDL, SDL_image, standard IO, and, strings
 #include <SDL.h>
 #include <SDL_image.h>
+#include <input.h>
+#include <player.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string>
 #include <texture.h>
 #include <timer.h>
 
-// Screen dimension constants
+/** @brief width of the game window */
 const int SCREEN_WIDTH = 640;
+/** @brief height of the game window */
 const int SCREEN_HEIGHT = 480;
 
-// Starts up SDL and creates window
-bool init();
+/** @brief the name of the game, to be displayed in the window header */
+static const char game_name = "test game";
+/** @brief the name of the image file to load for the player texture */
+static const char player_tex_path = "dot.bmp";
 
-// Loads media
-bool loadMedia();
+/** @brief window to render to */
+static SDL_Window *window = NULL;
+/** @brief texture renderer */
+static SDL_Renderer *rend = NULL;
+/** @brief player texture */
+static texture_t player_tex;
 
-// Frees media and shuts down SDL
-void close();
+bool game_init(void);
+void game_close(void);
+void game_loop(void);
 
-// The window we'll be rendering to
-SDL_Window *gWindow = NULL;
-
-// The window renderer
-SDL_Renderer *gRenderer = NULL;
-
-// Scene textures
-LTexture gDotTexture;
-
-bool init() {
-  // Initialization flag
-  bool success = true;
-
-  // Initialize SDL
+/** @brief Initializes the game state
+ *
+ *  This function initializes SDL, sets texture filtering to linear,
+ *  creates a window to render on, creates a renderer for the window,
+ *  initializes the render color to white, initializes PNG loading,
+ *  and loads the texture for the player.
+ *
+ *  @return true if the steps listed all completed successfully,
+ *          or false otherwise,
+ */
+bool game_init(void) {
+  /* initialize SDL */
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
-    success = false;
-  } else {
-    // Set texture filtering to linear
-    if (!SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1")) {
-      printf("Warning: Linear texture filtering not enabled!");
-    }
-
-    // Create window
-    gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED,
-                               SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,
-                               SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-    if (gWindow == NULL) {
-      printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
-      success = false;
-    } else {
-      // Create renderer for window
-      gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
-      if (gRenderer == NULL) {
-        printf("Renderer could not be created! SDL Error: %s\n",
-               SDL_GetError());
-        success = false;
-      } else {
-        // Initialize renderer color
-        SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-
-        // Initialize PNG loading
-        int imgFlags = IMG_INIT_PNG;
-        if (!(IMG_Init(imgFlags) & imgFlags)) {
-          printf("SDL_image could not initialize! SDL_image Error: %s\n",
-                 IMG_GetError());
-          success = false;
-        }
-      }
-    }
+    goto init_err;
   }
 
-  return success;
-}
+  /* set texture filtering to linear */
+  if (!SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1"))
+    printf("Warning: Linear texture filtering not enabled!");
 
-bool loadMedia() {
-  // Loading success flag
-  bool success = true;
+  /* create window to render on */
+  window = SDL_CreateWindow(game_name, SDL_WINDOWPOS_UNDEFINED,
+                            SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,
+                            SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+  if (window == NULL) {
+    printf("Window could not be created! Error: %s\n", SDL_GetError());
+    goto init_err;
+  }
 
-  // Load dot texture
-  if (!gDotTexture.loadFromFile("44_frame_independent_movement/dot.bmp")) {
+  /* create renderer for window */
+  rend = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  if (rend == NULL) {
+    printf("Renderer could not be created! Error: %s\n", SDL_GetError());
+    goto init_err_window;
+  }
+
+  /* initialize renderer color to white */
+  SDL_SetRenderDrawColor(rend, 0xFF, 0xFF, 0xFF, 0xFF);
+
+  /* initialize PNG loading */
+  if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
+    printf("SDL_image could not initialize! Error: %s\n", IMG_GetError());
+    goto init_err_rend;
+  }
+
+  /* create and load player texture */
+  texture_init(&player_tex);
+  if (!texture_load(&player_tex, rend, player_tex_path)) {
     printf("Failed to load dot texture!\n");
-    success = false;
+    goto init_err_rend;
   }
 
-  return success;
+  return true;
+
+  /* error cleanup */
+init_err_rend:
+  SDL_DestroyRenderer(rend);
+init_err_window:
+  SDL_DestroyWindow(window);
+init_err:
+  return false;
 }
 
-void close() {
-  // Free loaded images
-  gDotTexture.free();
+/** @brief Closes the game by freeing resources and exiting.
+ *
+ *  @return Does not return, exits the process with status 0.
+ */
+void game_close() {
+  /* free resources */
+  texture_destroy(&player_tex);
+  SDL_DestroyRenderer(rend);
+  SDL_DestroyWindow(window);
 
-  // Destroy window
-  SDL_DestroyRenderer(gRenderer);
-  SDL_DestroyWindow(gWindow);
-  gWindow = NULL;
-  gRenderer = NULL;
-
-  // Quit SDL subsystems
+  /* close SDL and IMG modules */
   IMG_Quit();
   SDL_Quit();
+
+  /* exit the program */
+  exit(0);
 }
 
-int main(int argc, char *args[]) {
-  // Start up SDL and create window
-  if (!init()) {
-    printf("Failed to initialize!\n");
-  } else {
-    // Load media
-    if (!loadMedia()) {
-      printf("Failed to load media!\n");
-    } else {
-      // Main loop flag
-      bool quit = false;
+/** @brief Performs the game loop, which polls for SDL events and updates the
+ *         game state.
+ *
+ *  @return Does not return, unless the game is quit.
+ */
+void game_loop() {
+  SDL_Event e;
+  input_t input;
+  player_t player;
+  player_init(&player);
 
-      // Event handler
-      SDL_Event e;
-
-      // The dot that will be moving around on the screen
-      Dot dot;
-
-      // Keeps track of time between steps
-      LTimer stepTimer;
-
-      // While application is running
-      while (!quit) {
-        // Handle events on queue
-        while (SDL_PollEvent(&e) != 0) {
-          // User requests quit
-          if (e.type == SDL_QUIT) {
-            quit = true;
-          }
-
-          // Handle input for the dot
-          dot.handleEvent(e);
-        }
-
-        // Calculate time step
-        float timeStep = stepTimer.getTicks() / 1000.f;
-
-        // Move for time step
-        dot.move(timeStep);
-
-        // Restart step timer
-        stepTimer.start();
-
-        // Clear screen
-        SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-        SDL_RenderClear(gRenderer);
-
-        // Render dot
-        dot.render();
-
-        // Update screen
-        SDL_RenderPresent(gRenderer);
-      }
+  while (true) {
+    /* handle all pending SDL events */
+    while (SDL_PollEvent(&e)) {
+      if (e.type == SDL_QUIT)
+        close();
+      if (input_from_event(&input, &e))
+        player_input(&player, &input);
     }
+
+    /* move player */
+    timer_pause();
+    player_move(&player, timer_ticks() / 1000);
+    timer_stop();
+    timer_start();
+
+    /* render player */
+    SDL_SetRenderDrawColor(rend, 0xFF, 0xFF, 0xFF, 0xFF);
+    SDL_RenderClear(rend);
+    texture_render(&player_tex, rend, player.x, player.y);
+    SDL_RenderPresent(rend);
+  }
+}
+
+/** @brief main routine of the game program */
+int main(int argc, char *argv[]) {
+  (void)argc;
+  (void)argv;
+
+  /* initialize game state */
+  if (!game_init()) {
+    printf("Failed to initialize!\n");
+    return -1;
   }
 
-  // Free resources and close SDL
-  close();
-
+  /* begin game loop */
+  game_loop();
   return 0;
 }
