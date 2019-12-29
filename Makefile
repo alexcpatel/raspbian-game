@@ -4,12 +4,12 @@ ODIR = obj
 
 CC = gcc
 CFLAGS = `sdl2-config --cflags` -g -Wall -Werror -pedantic -std=c99 -I$(IDIR)
-LIBS = -lSDL2 -lSDL2_image
+LIBS = -lSDL2 -lSDL2_image -lm
 
-_DEPS = constants.h input.h player.h texture.h timer.h
+_DEPS = constants.h player.h texture.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = game.o input.o player.o texture.o timer.o
+_OBJ = game.o player.o texture.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 game: clean $(ODIR) $(OBJ)

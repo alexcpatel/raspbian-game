@@ -8,13 +8,11 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <constants.h>
-#include <input.h>
 #include <player.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <texture.h>
-#include <timer.h>
 
 /** @brief the name of the game, to be displayed in the window header */
 static const char *game_name = "test game";
@@ -121,30 +119,29 @@ void game_close() {
  */
 void game_loop() {
   SDL_Event e;
-  input_t input;
   player_t player;
+  uint32_t now;
 
   /* initialize game loop */
   player_init(&player);
-  timer_start();
+  now = SDL_GetTicks();
 
   while (true) {
     /* handle all pending SDL events */
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT)
         game_close();
-      if (input_from_event(&input, &e))
-        player_input(&player, &input);
+      player_handle_event(&player, &e);
     }
 
     /* move player */
-    player_move(&player, timer_ticks() / 7);
-    timer_reset();
+    player_move(&player, SDL_GetTicks() - now);
+    now = SDL_GetTicks();
 
     /* render player */
     SDL_SetRenderDrawColor(rend, 0xFF, 0xFF, 0xFF, 0xFF);
     SDL_RenderClear(rend);
-    texture_render(&player_tex, rend, player.x, player.y);
+    texture_render(&player_tex, rend, (int)player.x, (int)player.y);
     SDL_RenderPresent(rend);
   }
 }
