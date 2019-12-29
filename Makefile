@@ -1,14 +1,27 @@
+IDIR = include
+SDIR = src
+ODIR = obj
+
 CC = gcc
-CSDL = `sdl2-config --cflags` `sdl2-config --libs`
-CFLAGS = -g -Wall -pedantic -std=c99
-CALL = $(CC) $(CSDL) $(CFLAGS)
+CFLAGS = `sdl2-config --cflags` -g -Wall -Werror -pedantic -std=c99 -I$(IDIR)
+LIBS = -lSDL2 -lSDL2_image
 
-CUR = test
+_DEPS = constants.h input.h player.h texture.h timer.h
+DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-all: clean $(CUR)
-$(CUR):
-	$(CALL) -o $(CUR) $(CUR).c
+_OBJ = game.o input.o player.o texture.o timer.o
+OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+
+game: clean $(ODIR) $(OBJ)
+	$(CC) -o $@ $(OBJ) $(CFLAGS) $(LIBS)
+
+$(ODIR)/%.o: $(SDIR)/%.c $(ODIR) $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS) $(LIBS)
+
+.PHONY: $(ODIR)
+$(ODIR):
+	mkdir $(ODIR)
 
 .PHONY: clean
 clean:
-	rm $(CUR)
+	rm -rf game $(ODIR) core *~ $(IDIR)/*~

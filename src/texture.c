@@ -1,10 +1,13 @@
-/** @brief Texture utility module implementation
+/** @file texture.c
+ *  @brief Texture utility implementation.
  *
- *
+ *  @author Alexander Patel <acpatel@andrew.cmu.edu>
+ *  @bug No known bugs.
  */
 
 #include <SDL.h>
 #include <SDL_image.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <texture.h>
 
@@ -27,10 +30,14 @@ void texture_init(texture_t *tex) {
  */
 void texture_destroy(texture_t *tex) {
   assert(tex != NULL);
-  assert(tex->sdltex != NULL);
 
-  SDL_DestroyTexture(tex->sdltex);
-  tex->sdltex = NULL;
+  /* free SDL texture resource */
+  if (tex->sdltex != NULL) {
+    SDL_DestroyTexture(tex->sdltex);
+    tex->sdltex = NULL;
+  }
+
+  /* reset texture fields */
   tex->w = 0;
   tex->h = 0;
 }
@@ -48,10 +55,15 @@ bool texture_load(texture_t *tex, SDL_Renderer *rend, const char *path) {
   assert(tex != NULL);
   assert(rend != NULL);
   assert(path != NULL);
-  assert(tex->sdltex != NULL);
 
   SDL_Surface *surf;
   SDL_Texture *sdltex;
+
+  /* remove old SDL texture if it exists */
+  if (tex->sdltex != NULL) {
+    SDL_DestroyTexture(tex->sdltex);
+    tex->sdltex = NULL;
+  }
 
   /* load image into new surface */
   if ((surf = IMG_Load(path)) == NULL) {

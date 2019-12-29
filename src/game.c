@@ -1,27 +1,25 @@
-/** @brief A simple game...
+/** @file game.c
+ *  @brief A simple game...
  *
- *
+ *  @author Alexander Patel <acpatel@andrew.cmu.edu>
+ *  @bug No known bugs.
  */
 
 #include <SDL.h>
 #include <SDL_image.h>
+#include <constants.h>
 #include <input.h>
 #include <player.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string>
+#include <string.h>
 #include <texture.h>
 #include <timer.h>
 
-/** @brief width of the game window */
-const int SCREEN_WIDTH = 640;
-/** @brief height of the game window */
-const int SCREEN_HEIGHT = 480;
-
 /** @brief the name of the game, to be displayed in the window header */
-static const char game_name = "test game";
+static const char *game_name = "test game";
 /** @brief the name of the image file to load for the player texture */
-static const char player_tex_path = "dot.bmp";
+static const char *player_tex_path = "dot.bmp";
 
 /** @brief window to render to */
 static SDL_Window *window = NULL;
@@ -125,22 +123,23 @@ void game_loop() {
   SDL_Event e;
   input_t input;
   player_t player;
+
+  /* initialize game loop */
   player_init(&player);
+  timer_start();
 
   while (true) {
     /* handle all pending SDL events */
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT)
-        close();
+        game_close();
       if (input_from_event(&input, &e))
         player_input(&player, &input);
     }
 
     /* move player */
-    timer_pause();
-    player_move(&player, timer_ticks() / 1000);
-    timer_stop();
-    timer_start();
+    player_move(&player, timer_ticks() / 7);
+    timer_reset();
 
     /* render player */
     SDL_SetRenderDrawColor(rend, 0xFF, 0xFF, 0xFF, 0xFF);

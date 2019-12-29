@@ -1,6 +1,8 @@
-/** @brief Timer utility module implementation
+/** @file timer.c
+ *  @brief Global timer implementation.
  *
- *
+ *  @author Alexander Patel <acpatel@andrew.cmu.edu>
+ *  @bug No known bugs.
  */
 
 #include <SDL.h>
@@ -31,12 +33,13 @@ void timer_start(void) {
   started = true;
   paused = false;
   start_ticks = SDL_GetTicks();
-  paused_ticks = 0;
+  pause_ticks = 0;
 }
 
 /** @brief Stops the timer
  *
- *  Requires the timer to be started.
+ *  Requires the timer to be started. The timer cannot be used after being
+ *  stopped until it is later re-started.
  */
 void timer_stop(void) {
   assert(started);
@@ -44,7 +47,19 @@ void timer_stop(void) {
   started = false;
   paused = false;
   start_ticks = 0;
-  paused_ticks = 0;
+  pause_ticks = 0;
+}
+
+/** @brief Resets the timer
+ *
+ *  Requires the timer to be started.
+ */
+void timer_reset(void) {
+  assert(started);
+
+  paused = false;
+  start_ticks = SDL_GetTicks();
+  pause_ticks = 0;
 }
 
 /** @brief Pauses the timer
@@ -56,7 +71,7 @@ void timer_pause() {
   assert(!paused);
 
   paused = true;
-  paused_ticks = SDL_GetTicks() - start_ticks;
+  pause_ticks = SDL_GetTicks() - start_ticks;
   start_ticks = 0;
 }
 
@@ -69,8 +84,8 @@ void timer_resume(void) {
   assert(paused);
 
   paused = false;
-  start_ticks = SDL_GetTicks() - paused_ticks;
-  paused_ticks = 0;
+  start_ticks = SDL_GetTicks() - pause_ticks;
+  pause_ticks = 0;
 }
 
 /** @brief Returns the current number of timer ticks
@@ -84,5 +99,5 @@ void timer_resume(void) {
 uint32_t timer_ticks(void) {
   assert(started);
 
-  return paused ? paused_ticks : SDL_GetTicks() - start_ticks;
+  return paused ? pause_ticks : SDL_GetTicks() - start_ticks;
 }

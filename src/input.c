@@ -1,10 +1,14 @@
-/** @brief Game input implementation
+/** @file input.c
+ *  @brief Game input implementation.
  *
- *
+ *  @author Alexander Patel <acpatel@andrew.cmu.edu>
+ *  @bug No known bugs.
  */
 
 #include <SDL.h>
+#include <assert.h>
 #include <input.h>
+#include <stdbool.h>
 
 /** @brief Converts an SDL key event to a game input.
  *
